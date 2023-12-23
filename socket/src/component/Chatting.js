@@ -3,8 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Chat from "./Chat";
 import Notice from "./Notice";
 import io from "socket.io-client";
+import Time from "./Time";
 
 const socket = io.connect("http://localhost:8000", { autoConnect: false });
+
 export default function Chatting() {
   const [msgInput, setMsgInput] = useState("");
   const [userIdInput, setUserIdInput] = useState("");
@@ -32,14 +34,9 @@ export default function Chatting() {
     });
   }, []);
 
-  // useMemo: 값을 메모라이징 한다.
-  // 뒤에 있는 의존성 배열에 있는 값이 update 될 때마다 연산을 실행함.
   const userListOptions = useMemo(() => {
-    // [<option></option>, <option></option>]
     const options = [];
     for (const key in userList) {
-      // key : userList의 key값 (socket id)
-      // userList[key] : userList의 value값 (사용자 id)
       if (userList[key] === userId) continue;
       options.push(
         <option key={key} value={key}>
@@ -58,7 +55,11 @@ export default function Chatting() {
       const content = `${res.dm ? "(속닥속닥) " : ""} ${res.userId}: ${
         res.msg
       }`;
-      const newChatList = [...chatList, { type: type, content: content }];
+      const time = res.time;
+      const newChatList = [
+        ...chatList,
+        { type: type, content: content, time: time },
+      ];
       setChatList(newChatList);
     },
     [userId, chatList]
@@ -92,18 +93,20 @@ export default function Chatting() {
   };
   return (
     <>
-      <h3>실습 4, 5번</h3>
-      <ul>
-        <li>채팅창 메세지 전송</li>
-        <li>DM 기능 구현</li>
-      </ul>
-
       {userId ? (
         <>
-          <div>{userId}님 환영합니다.</div>
+          <div className="welcome">
+            {userId}님 환영합니다. 자유롭게 대화를 시작해 보세요 !{"👋🏻"}
+            <br />
+            🙅🏻 욕설과 비방은 삼가부탁드립니다. 🙅🏻
+          </div>
+          <div>
+            대화방에 참여한 유저: {Object.values(userList).join(", ")}
+          </div>{" "}
           <div className="chat-container">
             {chatList.map((chat, i) => {
-              if (chat.type === "notice") return <Notice key={i} chat={chat} />;
+              if (chat.type === "notice")
+                return <Notice key={i} chat={chat} time={Time} />;
               else return <Chat key={i} chat={chat} />;
             })}
           </div>
@@ -116,17 +119,29 @@ export default function Chatting() {
               type="text"
               value={msgInput}
               onChange={(e) => setMsgInput(e.target.value)}
+              onKeyPress={(event) => {
+                if (event.key === "Enter") {
+                  sendMsg();
+                }
+              }}
             />
             <button onClick={sendMsg}>전송</button>
           </div>
         </>
       ) : (
         <>
+          <h3>익명 채팅</h3>
+          <div>사용하실 닉네임을 입력해 주세요</div>
           <div className="input-container">
             <input
               type="text"
               value={userIdInput}
               onChange={(e) => setUserIdInput(e.target.value)}
+              onKeyPress={(event) => {
+                if (event.key === "Enter") {
+                  entryChat();
+                }
+              }}
             />
             <button onClick={entryChat}>입장</button>
           </div>
